@@ -42,7 +42,7 @@ var MODULE_TEMPLATES = {
  * Add files to templateCache.
  */
 
-function templateCacheFiles(root, base, templateBody, transformUrl) {
+function templateCacheFiles(root, base, templateBody, transformUrl, preProcessModifier) {
 
   return function templateCacheFile(file, callback) {
     if (file.processedByTemplateCache) {
@@ -51,6 +51,7 @@ function templateCacheFiles(root, base, templateBody, transformUrl) {
 
     var template = templateBody || TEMPLATE_BODY;
     var url;
+    var contents;
 
     file.path = path.normalize(file.path);
 
@@ -81,12 +82,29 @@ function templateCacheFiles(root, base, templateBody, transformUrl) {
     }
 
     /**
+     * Filter function (optional)
+     */
+
+
+    /**
      * Create buffer
      */
 
+    if(preProcessModifier) {
+      if (preProcessModifier.url) {
+        url = preProcessModifier.url(file, url);
+      }
+      if (preProcessModifier.contents) {
+        contents = preProcessModifier.contents(file, contents);
+      }
+      if (preProcessModifier.file) {
+        file = preProcessModifier.file(file);
+      }
+    }
+
     file.contents = new Buffer(gutil.template(template, {
       url: url,
-      contents: htmlJsStr(file.contents),
+      contents: contents,
       file: file
     }));
 
@@ -102,7 +120,7 @@ function templateCacheFiles(root, base, templateBody, transformUrl) {
  * templateCache a stream of files.
  */
 
-function templateCacheStream(root, base, templateBody, transformUrl) {
+function templateCacheStream(root, base, templateBody, transformUrl, preProcessModifier) {
 
   /**
    * Set relative base
@@ -116,7 +134,7 @@ function templateCacheStream(root, base, templateBody, transformUrl) {
    * templateCache files
    */
 
-  return es.map(templateCacheFiles(root, base, templateBody, transformUrl));
+  return es.map(templateCacheFiles(root, base, templateBody, transformUrl, preProcessModifier));
 
 }
 
@@ -145,7 +163,7 @@ function wrapInModule(moduleSystem) {
  * @param {object} [options]
  */
 
-function templateCache(filename, options) {
+function templateCache(filename, options, preProcessModifier) {
 
   /**
    * Prepare options
@@ -178,7 +196,7 @@ function templateCache(filename, options) {
    */
 
   return es.pipeline(
-    templateCacheStream(options.root || '', options.base, options.templateBody, options.transformUrl),
+    templateCacheStream(options.root || '', options.base, options.templateBody, options.transformUrl, preProcessModifier),
     concat(filename),
     header(templateHeader, {
       module: options.module || DEFAULT_MODULE,
