@@ -55,7 +55,7 @@ function templateCacheFiles(root, base, templateBody, transformUrl, preProcessMo
 
     file.path = path.normalize(file.path);
 
-    /**
+    /** 
      * Rewrite url
      */
 
@@ -82,26 +82,30 @@ function templateCacheFiles(root, base, templateBody, transformUrl, preProcessMo
     }
 
     /**
-     * Filter function (optional)
+     * Pre-process
      */
 
+    if(preProcessModifier && preProcessModifier.template) {
+        template = preProcessModifier.template(file, template);
+    }
+
+    if(preProcessModifier && preProcessModifier.url) {
+        url = preProcessModifier.url(file, url);
+    }
+    
+    if (preProcessModifier && preProcessModifier.contents) {
+        contents = preProcessModifier.contents(file, contents);
+    } else {
+        contents = htmlJsStr(file.contents);
+    }
+    
+    if (preProcessModifier && preProcessModifier.file) {
+      file = preProcessModifier.file(file);
+    }
 
     /**
      * Create buffer
-     */
-
-    if(preProcessModifier) {
-      if (preProcessModifier.url) {
-        url = preProcessModifier.url(file, url);
-      }
-      if (preProcessModifier.contents) {
-        contents = preProcessModifier.contents(file, contents);
-      }
-      if (preProcessModifier.file) {
-        file = preProcessModifier.file(file);
-      }
-    }
-
+     */    
     file.contents = new Buffer(gutil.template(template, {
       url: url,
       contents: contents,
